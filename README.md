@@ -31,11 +31,35 @@ Requires Node.js 22.13 or newer (it uses the built-in `node:sqlite`).
 ```bash
 node dev/server.js          # → http://localhost:3000
 node scripts/verify-solution.js   # sanity check: one kidnapper, one mastermind
+node scripts/verify-guided.js     # verify guided queries and decoy choices
+node scripts/verify-arena.js      # verify all 30 arena questions and scoring
 ```
 
 The badge in the top-right shows **local simulator**. The simulator enforces the main ZCQL rules
 (`*` wildcards, FK→ROWID joins, max 4 joins and 5 WHERE conditions), but the real Catalyst project is
 the source of truth.
+
+Click **Start investigation** to enter the play arena. Each timed round has three tile-built
+queries from one of ten cases (30 questions total). Only the current question’s tables are shown.
+Each beginner question uses one table, at most ten answer tiles, and two decoys. Prompts focus on
+showing, filtering, sorting, limiting, or counting records without joins or grouped totals.
+Tap tiles in order to build a formatted query, then **Run query** to see records and feedback.
+Each question gets one scored attempt; continue after a right or wrong answer. Three correct
+queries earn **Master Detective**. The timer stops after the third answer is checked.
+**Exit game** discards an active round without recording a score. Each new game asks for a fresh
+detective name; names are not prefilled from the previous game.
+
+Cases rotate in a shuffled queue without repeating until all ten have been played. The queue
+and local leaderboard are stored in IndexedDB (`memo-detective-bureau`). The leaderboard shows
+the top ten completed rounds at any score, ranked by score and then fastest time. They stay on this browser and device. An active round survives
+refresh in session storage, and its timer keeps running while away. If browser storage is
+blocked, the game remains playable and explains that scores cannot be saved. The academy
+keeps its manual carousel and opens unranked tile practice for each lesson.
+
+The current question bank and grading live in `functions/zcql_api/lib/arena.js`.
+`GET /arena` returns question tiles and their schemas, without solutions. `POST /arena/query`
+executes the read-only query and grades the assembled tile order on the server. The original
+long-form mystery’s backend and host walkthrough remain available for reference.
 
 ## 2. Deploy to Zoho Catalyst
 
