@@ -1,0 +1,92 @@
+# Keeps Zoho Catalyst in sync with master.
+#   - Every push / pull request: check the code and play the whole case (must have exactly one solution).
+#   - Push to master (or manual run): deploy client + zcql_api to Catalyst, then smoke-test the live app.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CATALYST_TOKEN  output of `catalyst token:generate` (CLI token for the IN data center)
+#   ADMIN_KEY       admin key for /admin/* routes (kept out of git; injected at deploy time)
+name: Deploy to Catalyst
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CATALYST_PROJECT_ID: "104589000000013051"
+  CATALYST_ORG_ID: "60097076678"
+  CATALYST_DC: in
+  APP_URL: https://memo-mystery-60097076678.development.catalystserverless.in
+
+jobs:
+  test:
+    name: Check code & solve the case
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"   # node:sqlite (used by the simulator) needs 22.13+
+      - name: Syntax check
+        run: |
+          node --check client/app.js
+          node --check functions/zcql_api/index.js
+          node --check dev/server.js
+      - name: Seed data is up to date
+        run: |
+          node scripts/generate-seed.js
+          git diff --exit-code -- functions/zcql_api/data/seed-data.json \
+            || (echo "::error::seed-data.json is stale. Run 'node scripts/generate-seed.js' and commit it." && exit 1)
+      - name: Play the whole case (exactly one kidnapper and one mastermind)
+        run: node scripts/verify-solution.js
+
+  deploy:
+    name: Deploy to Catalyst (Development)
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: catalyst-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install Catalyst CLI
+        run: npm install -g zcatalyst-cli@1.29.1 --no-audit --no-fund
+      - name: Check secrets are configured
+        env:
+          CATALYST_TOKEN: ${{ secrets.CATALYST_TOKEN }}
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          [ -n "$CATALYST_TOKEN" ] || { echo "::error::Missing repository secret CATALYST_TOKEN"; exit 1; }
+          [ -n "$ADMIN_KEY" ] || { echo "::error::Missing repository secret ADMIN_KEY"; exit 1; }
+      - name: Deploy
+        env:
+          CATALYST_TOKEN: ${{ secrets.CATALYST_TOKEN }}
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+          ZCATALYST_NON_INTERACTIVE: "1"
+        run: |
+          ./scripts/deploy.sh \
+            --token "$CATALYST_TOKEN" \
+            --project "$CATALYST_PROJECT_ID" \
+            --org "$CATALYST_ORG_ID" \
+            --dc "$CATALYST_DC"
+      - name: Smoke-test the live app
+        env:
+          ADMIN_KEY: ${{ secrets.ADMIN_KEY }}
+        run: |
+          sleep 10   # give Catalyst a moment to retire the previous function instance
+          curl -fsS "$APP_URL/app/index.html" -o /dev/null
+          curl -fsS "$APP_URL/server/zcql_api/schema" | grep -q '"mode":"catalyst"'
+          curl -fsS -X POST "$APP_URL/server/zcql_api/query" -H 'Content-Type: application/json' \
+            -d "{\"query\":\"SELECT ROWID, event_name FROM Meetup_Events WHERE event_name LIKE '*#42'\"}" \
+            | grep -q 'ReactHyderabad Meetup #42'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "x-admin-key: $ADMIN_KEY" "$APP_URL/server/zcql_api/admin/status")
+          [ "$code" = "200" ] || { echo "::error::Admin routes returned $code (is the ADMIN_KEY secret right?)"; exit 1; }
+          echo "✓ Live at $APP_URL/app/index.html"

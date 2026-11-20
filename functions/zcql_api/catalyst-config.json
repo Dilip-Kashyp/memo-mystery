@@ -4,7 +4,7 @@
     "stack": "node20",
     "type": "advancedio",
     "env_variables": {
-      "ADMIN_KEY": "f9a450b10f338cf6e9b0b37d7e27ac11c6eb7a3807cfe470"
+      "ADMIN_KEY": "change-me"
     }
   },
   "execution": {
