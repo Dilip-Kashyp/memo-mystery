@@ -11,6 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const { run } = require('./sim');
 const { TABLES, SYSTEM_COLUMNS } = require('../functions/zcql_api/lib/schema');
+const arena = require('../functions/zcql_api/lib/arena');
 const { validateQuery } = require('../functions/zcql_api/lib/guard');
 const { checkAnswer } = require('../functions/zcql_api/lib/game');
 
@@ -35,6 +36,18 @@ http.createServer(async (req, res) => {
   const route = url.pathname.replace(/^\/server\/zcql_api/, '');
   if (url.pathname.startsWith('/server/zcql_api')) {
     if (req.method === 'GET' && route === '/schema') return send(res, 200, { tables: TABLES, systemColumns: SYSTEM_COLUMNS, mode: 'local' });
+    if (req.method === 'GET' && route === '/arena') return send(res, 200, { cases: arena.publicCases() });
+    if (req.method === 'POST' && route === '/arena/query') {
+      const body = await readBody(req);
+      if (typeof body.query !== 'string') return send(res, 400, { error: 'Choose some query tiles first.' });
+      const verdict = arena.grade(body.id, body.query);
+      if (!verdict) return send(res, 400, { error: 'Unknown question.' });
+      const v = validateQuery(body.query);
+      if (!v.ok) return send(res, 200, { ...verdict, correct: false, queryError: v.error, columns: [], rows: [] });
+      const t = Date.now();
+      try { return send(res, 200, { ...run(v.query), ...verdict, ms: Date.now() - t }); }
+      catch (e) { return send(res, 200, { ...verdict, correct: false, queryError: e.message, columns: [], rows: [] }); }
+    }
     if (req.method === 'POST' && route === '/query') {
       const v = validateQuery((await readBody(req)).query);
       if (!v.ok) return send(res, 400, { error: v.error });

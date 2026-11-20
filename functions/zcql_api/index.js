@@ -17,6 +17,7 @@ const { validateQuery } = require('./lib/guard');
 const { checkAnswer } = require('./lib/game');
 const { flattenZcql, orderBySelect } = require('./lib/flatten');
 const seeder = require('./lib/seeder');
+const arena = require('./lib/arena');
 
 const MAX_ROWS = 300;
 const app = express();
@@ -31,6 +32,26 @@ function errorText(e) {
 
 app.get('/schema', (req, res) => {
   res.json({ tables: TABLES, systemColumns: SYSTEM_COLUMNS, mode: 'catalyst' });
+});
+
+app.get('/arena', (req, res) => res.json({ cases: arena.publicCases() }));
+app.post('/arena/query', async (req, res) => {
+  const body = req.body || {};
+  if (typeof body.query !== 'string') return res.status(400).json({ error: 'Choose some query tiles first.' });
+  const verdict = arena.grade(body.id, body.query);
+  if (!verdict) return res.status(400).json({ error: 'Unknown question.' });
+  const v = validateQuery(body.query);
+  if (!v.ok) return res.json({ ...verdict, correct: false, queryError: v.error, columns: [], rows: [] });
+  const started = Date.now();
+  try {
+    const result = await catalyst.initialize(req).zcql().executeZCQLQuery(v.query);
+    const grid = orderBySelect(flattenZcql(result), v.query);
+    res.json({ ...grid, ...verdict, rows: grid.rows.slice(0, MAX_ROWS), truncated: grid.rows.length > MAX_ROWS, ms: Date.now() - started });
+  } catch (e) {
+    // A service failure should remain retryable; an invalid submitted query is a scored attempt.
+    if (verdict.correct) return res.status(503).json({ error: 'The evidence locker is unavailable. Try Run again.' });
+    res.json({ ...verdict, correct: false, queryError: errorText(e), columns: [], rows: [] });
+  }
 });
 
 app.post('/query', async (req, res) => {

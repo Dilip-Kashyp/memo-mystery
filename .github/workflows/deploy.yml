@@ -34,6 +34,9 @@ jobs:
       - name: Syntax check
         run: |
           node --check client/app.js
+          node --check client/guided.js
+          node --check client/arena-store.js
+          node --check functions/zcql_api/lib/arena.js
           node --check functions/zcql_api/index.js
           node --check dev/server.js
       - name: Seed data is up to date
@@ -43,6 +46,10 @@ jobs:
             || (echo "::error::seed-data.json is stale. Run 'node scripts/generate-seed.js' and commit it." && exit 1)
       - name: Play the whole case (exactly one kidnapper and one mastermind)
         run: node scripts/verify-solution.js
+      - name: Verify guided queries and decoys
+        run: node scripts/verify-guided.js
+      - name: Verify arena questions and grading
+        run: node scripts/verify-arena.js
 
   deploy:
     name: Deploy to Catalyst (Development)

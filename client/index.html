@@ -19,20 +19,16 @@
     </a>
     <nav class="topnav" aria-label="Sections">
       <a href="#case">Case</a>
-      <a href="#academy">ZCQL 101</a>
-      <a href="#console">Console</a>
-      <a href="#solve">Solve</a>
+      <a href="#academy">Memo’s language</a>
+      <a href="#play" data-start>Play arena</a>
+      <a href="#leaderboard">Leaderboard</a>
     </nav>
-    <div class="timer" id="timer" role="group" aria-label="Investigation timer">
-      <button type="button" id="timer-display" class="timer-display" title="Investigation time. Starts with your first query.">
-        <span aria-hidden="true">⏱</span> <span id="timer-text">Start timer</span>
-      </button>
-      <button type="button" id="timer-reset" class="timer-reset" title="Reset timer" aria-label="Reset timer">↺</button>
-    </div>
+    <div class="timer" id="timer" hidden aria-label="Round time"><span class="arena-clock">⏱ <span id="timer-text">00:00</span></span></div>
     <span id="mode-badge" class="mode-badge" title="Where your queries run">connecting…</span>
   </header>
 
   <main id="top">
+    <div id="home-screen">
     <!-- ============ HERO / CASE ============ -->
     <section class="hero" id="case">
       <div class="hero-text">
@@ -45,20 +41,21 @@
         </p>
         <p>
           The police have handed you read access to their evidence locker: a <strong>Zoho Catalyst Data Store</strong>.
-          Your only tool is <strong>ZCQL</strong>, Catalyst's SQL-like query language. Learn it, use it, and bring Memo home.
+          Memo only speaks <strong>ZCQL</strong>. Learn a few words of his language, choose the pieces to ask for clues, and bring him home.
         </p>
         <div class="memory-card">
-          <p class="memory-title">What you remember</p>
-          <ul>
-            <li>The crime was a <strong>kidnapping</strong> on <strong>2026-11-15</strong> in <strong>Hyderabad</strong>.</li>
-            <li>The report is somewhere in the <code>Incident_Reports</code> table.</li>
-            <li>That's it. The rest is up to your queries.</li>
-          </ul>
+          <p class="memory-title">Your mission, in three moves</p>
+          <p>One case. Three queries. Tap the ZCQL tiles in order, run your query, and follow the next clue. Get all three right to earn Master Detective.</p>
         </div>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#console">Open the query console</a>
-          <a class="btn btn-ghost" href="#academy">New to ZCQL? Start here</a>
-        </div>
+        <form id="start-form" class="start-form" novalidate>
+          <label for="detective-name">Your detective name</label>
+          <input id="detective-name" maxlength="32" autocomplete="off" placeholder="e.g. Detective Kavya" required aria-describedby="start-status" />
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="start-btn" type="submit">Start investigation</button>
+            <a class="btn btn-ghost" href="#academy">Learn Memo’s language</a>
+          </div>
+          <p id="start-status" class="small muted" role="status">No sign-up. Scores stay in this browser.</p>
+        </form>
       </div>
       <figure class="poster" aria-label="Missing poster for Memo">
         <div class="poster-head">MISSING</div>
@@ -75,11 +72,24 @@
     <!-- ============ ACADEMY ============ -->
     <section class="section" id="academy">
       <div class="section-head">
-        <p class="eyebrow">Detective training</p>
-        <h2>Catalyst Data Store &amp; ZCQL 101</h2>
-        <p class="muted">ZCQL looks like SQL, but it has its own rules. Each card runs in the console below. Skim them now, come back when you're stuck.</p>
+        <p class="eyebrow">A little help from Memo</p>
+        <h2>Memo’s language: ZCQL</h2>
+        <p class="muted">Memo only speaks ZCQL. These little notes from him will help you ask for clues. Learn one idea at a time, at your own pace.</p>
       </div>
 
+      <div class="lesson-carousel" role="region" aria-roledescription="carousel" aria-label="Learn Memo’s language">
+        <div id="lessons" class="lessons" aria-live="polite"></div>
+        <div class="lesson-nav" role="group" aria-label="Lesson navigation">
+          <button type="button" id="lesson-prev" class="btn btn-small btn-ghost" aria-controls="lessons">← Previous</button>
+          <span id="lesson-progress" class="small muted" role="status"></span>
+          <button type="button" id="lesson-next" class="btn btn-small btn-primary" aria-controls="lessons">Next →</button>
+        </div>
+        <p class="lesson-ready"><a href="#play" data-start>Ready? Start an investigation</a></p>
+      </div>
+
+      <details class="academy-details">
+        <summary>Inside the evidence locker</summary>
+        <p class="muted small">The clues live in Zoho Catalyst’s Data Store. Your query travels from this page to the evidence locker and brings back matching records.</p>
       <div class="arch" aria-label="How this game runs on Zoho Catalyst">
         <div class="arch-node"><span class="arch-k">Web Client Hosting</span><span>this page</span></div>
         <div class="arch-arrow" aria-hidden="true">→</div>
@@ -89,113 +99,36 @@
         <div class="arch-arrow" aria-hidden="true">→</div>
         <div class="arch-node"><span class="arch-k">Data Store</span><span>8 tables of evidence</span></div>
       </div>
-
-      <div id="lessons" class="lessons"></div>
+      </details>
     </section>
 
-    <!-- ============ CONSOLE ============ -->
-    <section class="section" id="console">
-      <div class="section-head">
-        <p class="eyebrow">Investigation room</p>
-        <h2>ZCQL console</h2>
-        <p class="muted">Read-only access to the evidence. <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> runs your query. Click any cell to copy it (handy for those long <code>ROWID</code>s).</p>
-      </div>
+    <section class="section" id="leaderboard" aria-labelledby="leader-title">
+      <div class="section-head"><p class="eyebrow">The detective bureau</p><h2 id="leader-title">Top 10 detectives</h2><p class="muted">The top ten completed rounds, ranked by score. Faster times break ties. Saved in this browser, on this device.</p></div>
+      <div id="leaderboard-list" class="leaderboard-list" aria-live="polite"><p class="muted">Opening the case records…</p></div>
+    </section>
+    </div>
 
-      <div class="workspace">
-        <aside class="schema" aria-label="Database schema">
-          <div class="schema-head">
-            <h3>Evidence tables</h3>
-            <button class="link-btn" id="toggle-system" type="button" aria-pressed="false">Show system columns</button>
-          </div>
-          <div id="schema-list" class="schema-list"><p class="muted">Loading schema…</p></div>
-        </aside>
-
-        <div class="editor-col">
-          <div class="editor-card">
-            <div class="editor-bar">
-              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
-              <span class="editor-title">query.zcql</span>
-              <div class="editor-actions">
-                <button class="btn btn-small btn-ghost-dark" id="clear-btn" type="button">Clear</button>
-                <button class="btn btn-small btn-run" id="run-btn" type="button">▶ Run</button>
-              </div>
+    <section id="play" class="arena" hidden aria-label="Play arena">
+      <div class="arena-top"><button type="button" class="btn btn-small btn-ghost" id="exit-round">Exit game</button><span id="arena-case" class="eyebrow"></span><span id="arena-score" class="small muted"></span></div>
+      <div id="arena-question-screen">
+        <div class="arena-progress" id="arena-progress" role="progressbar" aria-label="Questions completed" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><span></span></div>
+        <div class="arena-prompt"><img src="memo.png" width="68" height="64" alt="Memo" /><div><p class="eyebrow" id="question-number"></p><h1 id="question-title" tabindex="-1"></h1><p id="case-story" class="muted"></p></div></div>
+        <div class="arena-layout">
+          <div class="arena-workbench">
+            <div class="editor-card">
+              <div class="editor-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="editor-title">query.zcql</span><span class="editor-actions"><button class="btn btn-small btn-ghost-dark" id="undo-tile" type="button">Undo</button><button class="btn btn-small btn-ghost-dark" id="clear-tiles" type="button">Clear</button></span></div>
+              <div id="arena-console" class="arena-console" role="group" aria-label="Your assembled ZCQL query"></div>
             </div>
-            <label for="editor" class="sr-only">ZCQL query</label>
-            <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT * FROM Incident_Reports LIMIT 5</textarea>
+            <div class="tile-panel"><div class="panel-head"><h2>Memo’s words</h2><span id="tile-count" class="small muted"></span></div><p class="small muted">Tap tiles in order. Tap a tile in the console to remove it. A few words are decoys.</p><div id="tile-bank" class="tile-bank" role="group" aria-label="Available ZCQL tiles"></div></div>
+            <div class="arena-actions"><span id="arena-message" class="small muted" role="status">Build your query, then press Run.</span><button id="arena-run" type="button" class="btn btn-run">Run query</button></div>
+            <section id="arena-feedback" class="arena-feedback" hidden aria-label="Query feedback" tabindex="-1"></section>
+            <div id="arena-results" class="result-card" hidden><div class="result-bar" id="arena-result-status"></div><div id="arena-result-grid" class="result"></div></div>
+            <button id="arena-next" class="btn btn-primary" type="button" hidden>Next question</button>
           </div>
-
-          <div class="result-card" aria-live="polite">
-            <div class="result-bar">
-              <span id="result-status" class="muted">Run a query to see results.</span>
-              <span id="copy-toast" class="copy-toast" hidden>Copied!</span>
-            </div>
-            <div id="result" class="result"></div>
-          </div>
-
-          <div class="below-grid">
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Detective's notebook</h3>
-                <span class="muted small">Saved in this browser</span>
-              </div>
-              <label for="notebook" class="sr-only">Notes</label>
-              <textarea id="notebook" class="notebook" placeholder="Suspects, ROWIDs, clues… e.g.&#10;Meetup #42 ROWID = …&#10;Witness 1 = …"></textarea>
-            </div>
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Query history</h3>
-                <button class="link-btn" id="clear-history" type="button">Clear</button>
-              </div>
-              <ol id="history" class="history"></ol>
-            </div>
-          </div>
+          <aside class="arena-schema panel" aria-label="Tables for this question"><h2>Evidence for this question</h2><p class="small muted">Only the tables you need. ROWID is each record’s unique ID.</p><div id="arena-schema"></div></aside>
         </div>
       </div>
-    </section>
-
-    <!-- ============ HINTS ============ -->
-    <section class="section" id="hints">
-      <div class="section-head">
-        <p class="eyebrow">Stuck?</p>
-        <h2>Hints</h2>
-        <p class="muted">Each hint reveals a little more. Real detectives try first.</p>
-      </div>
-      <div id="hint-list" class="hint-list"></div>
-    </section>
-
-    <!-- ============ SOLVE ============ -->
-    <section class="section" id="solve">
-      <div class="section-head">
-        <p class="eyebrow">Make the arrest</p>
-        <h2>Solve the case</h2>
-      </div>
-      <div class="solve-grid">
-        <form class="solve-card" id="form-kidnapper" data-stage="kidnapper">
-          <p class="stage-label">Stage 1</p>
-          <h3>Who kidnapped Memo?</h3>
-          <label for="ans-kidnapper">Full name, exactly as in <code>Persons</code></label>
-          <div class="solve-row">
-            <input id="ans-kidnapper" name="name" autocomplete="off" placeholder="e.g. Firstname Lastname" required />
-            <button class="btn btn-primary" type="submit">Accuse</button>
-          </div>
-          <div class="verdict" aria-live="polite"></div>
-          <p class="split" hidden></p>
-        </form>
-
-        <form class="solve-card locked" id="form-mastermind" data-stage="mastermind" aria-disabled="true">
-          <p class="stage-label">Stage 2</p>
-          <h3>Who was the mastermind?</h3>
-          <p class="lock-note">🔒 Unlocks after you catch the kidnapper.</p>
-          <label for="ans-mastermind">Full name, exactly as in <code>Persons</code></label>
-          <div class="solve-row">
-            <input id="ans-mastermind" name="name" autocomplete="off" placeholder="e.g. Firstname Lastname" required disabled />
-            <button class="btn btn-primary" type="submit" disabled>Accuse</button>
-          </div>
-          <div class="verdict" aria-live="polite"></div>
-          <p class="split" hidden></p>
-        </form>
-      </div>
-      <p class="muted small reset-line"><button class="link-btn" id="reset-progress" type="button">Reset my progress</button></p>
+      <section id="round-summary" class="round-summary" hidden aria-label="Detective rating" tabindex="-1"></section>
     </section>
   </main>
 
@@ -204,6 +137,7 @@
     <p class="muted small">Inspired by the SQL Murder Mystery format by Knight Lab.</p>
   </footer>
 
+  <script src="arena-store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
