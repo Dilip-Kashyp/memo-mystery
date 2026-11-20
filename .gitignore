@@ -2,3 +2,5 @@ node_modules/
 .catalystrc
 *.log
 .DS_Store
+.admin-key
+*.bak
