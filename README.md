@@ -63,20 +63,23 @@ MODIFIEDTIME are added automatically.
 
 The exact definitions live in [functions/zcql_api/lib/schema.js](functions/zcql_api/lib/schema.js).
 
-### 2.3 Set the admin key and deploy
-1. Edit [functions/zcql_api/catalyst-config.json](functions/zcql_api/catalyst-config.json) and replace
-   `"ADMIN_KEY": "change-me"` with a long random string. You can also set it later in the console under
-   the function's environment variables. Don't commit the real key.
-2. Install the function's dependencies and deploy:
-   ```bash
-   (cd functions/zcql_api && npm install)
-   catalyst deploy
-   ```
-   The CLI prints your app URL, e.g. `https://<project>-<id>.development.catalystserverless.in`.
+### 2.3 Deploy
+Pushes to `master` deploy automatically (see [Continuous deployment](#continuous-deployment)).
+To deploy by hand:
+
+```bash
+openssl rand -hex 24 > .admin-key          # once; .admin-key is git-ignored
+ADMIN_KEY="$(cat .admin-key)" ./scripts/deploy.sh
+```
+`catalyst-config.json` always keeps the placeholder `"ADMIN_KEY": "change-me"`. **Never commit a real
+key.** `deploy.sh` swaps the key in only while it deploys. Without a key, the `/admin/*` routes stay
+disabled.
+
+Live app: https://memo-mystery-60097076678.development.catalystserverless.in/app/index.html
 
 ### 2.4 Load the evidence
 ```bash
-APP_URL=https://<your-app-domain> ADMIN_KEY=<your-key> ./scripts/seed-catalyst.sh
+APP_URL=https://<your-app-domain> ADMIN_KEY="$(cat .admin-key)" ./scripts/seed-catalyst.sh
 # re-seed from scratch:
 RESET=1 APP_URL=... ADMIN_KEY=... ./scripts/seed-catalyst.sh
 ```
@@ -92,6 +95,23 @@ Open the app URL. The badge now reads **Catalyst Data Store**.
   from the simulator's). This confirms that real ZCQL behaves the way the hints describe.
 - Point players at the ZCQL 101 cards. As a bonus round, have them run the same queries in the
   **ZCQL console** inside the Catalyst web console.
+
+## Continuous deployment
+[.github/workflows/deploy.yml](.github/workflows/deploy.yml) keeps Catalyst in sync with `master`:
+
+| Event | What runs |
+|---|---|
+| Pull request, or push to any branch | Syntax checks, a check that seed data is up to date, and a full playthrough of the case (`verify-solution.js`) |
+| Push to `master`, or a manual run (Actions → *Deploy to Catalyst* → Run workflow) | All of the above, then a deploy to Catalyst Development and a smoke test of the live app |
+
+It needs two repository secrets (Settings → Secrets and variables → Actions):
+- `CATALYST_TOKEN`: from `catalyst token:generate` (run it while logged in to the IN data centre).
+  Revoke it with `catalyst token:list` / `catalyst token:revoke <id>`.
+- `ADMIN_KEY`: the same value as your local `.admin-key`.
+
+The deploy changes **code only**. It doesn't touch Data Store tables or rows. If you change the story
+data, re-seed by hand:
+`RESET=1 APP_URL=https://memo-mystery-60097076678.development.catalystserverless.in ADMIN_KEY="$(cat .admin-key)" ./scripts/seed-catalyst.sh`
 
 ## How the game stays safe
 The function runs ZCQL with admin scope, so [lib/guard.js](functions/zcql_api/lib/guard.js) is the gate:
