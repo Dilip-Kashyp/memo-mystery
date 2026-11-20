@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "targets": ["zcql_api"],
+    "ignore": [],
+    "scripts": {}
+  },
+  "client": {
+    "source": "client"
+  }
+}

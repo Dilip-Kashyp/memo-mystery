@@ -1,0 +1,11 @@
+{
+  "name": "zcql_api",
+  "version": "1.0.0",
+  "description": "Backend for The Memo Mystery: runs read-only ZCQL against the Catalyst Data Store",
+  "main": "index.js",
+  "private": true,
+  "dependencies": {
+    "express": "^4.22.3",
+    "zcatalyst-sdk-node": "^3.4.0"
+  }
+}

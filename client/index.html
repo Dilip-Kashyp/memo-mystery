@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>The Memo Mystery</title>
+  <meta name="description" content="A ZCQL detective game: rescue Memo, the ReactHyderabad mascot, by querying the Zoho Catalyst Data Store." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top">
+      <span class="brand-mark" aria-hidden="true">🔎</span>
+      <span>The Memo Mystery</span>
+    </a>
+    <nav class="topnav" aria-label="Sections">
+      <a href="#case">Case</a>
+      <a href="#academy">ZCQL 101</a>
+      <a href="#console">Console</a>
+      <a href="#solve">Solve</a>
+    </nav>
+    <div class="timer" id="timer" role="group" aria-label="Investigation timer">
+      <button type="button" id="timer-display" class="timer-display" title="Investigation time. Starts with your first query.">
+        <span aria-hidden="true">⏱</span> <span id="timer-text">Start timer</span>
+      </button>
+      <button type="button" id="timer-reset" class="timer-reset" title="Reset timer" aria-label="Reset timer">↺</button>
+    </div>
+    <span id="mode-badge" class="mode-badge" title="Where your queries run">connecting…</span>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO / CASE ============ -->
+    <section class="hero" id="case">
+      <div class="hero-text">
+        <p class="eyebrow">Case file #RH-42 · Hyderabad · 15 Nov 2026</p>
+        <h1>Memo has been <span class="kidnapped">kidnapped.</span></h1>
+        <p class="lede">
+          Memo, the beloved mascot of the <strong>ReactHyderabad</strong> community, vanished from the stage
+          during Meetup #42. He's the kind of guy who never re-renders without a reason, and now he's gone
+          without leaving a trace in the UI.
+        </p>
+        <p>
+          The police have handed you read access to their evidence locker: a <strong>Zoho Catalyst Data Store</strong>.
+          Your only tool is <strong>ZCQL</strong>, Catalyst's SQL-like query language. Learn it, use it, and bring Memo home.
+        </p>
+        <div class="memory-card">
+          <p class="memory-title">What you remember</p>
+          <ul>
+            <li>The crime was a <strong>kidnapping</strong> on <strong>2026-11-15</strong> in <strong>Hyderabad</strong>.</li>
+            <li>The report is somewhere in the <code>Incident_Reports</code> table.</li>
+            <li>That's it. The rest is up to your queries.</li>
+          </ul>
+        </div>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#console">Open the query console</a>
+          <a class="btn btn-ghost" href="#academy">New to ZCQL? Start here</a>
+        </div>
+      </div>
+      <figure class="poster" aria-label="Missing poster for Memo">
+        <div class="poster-head">MISSING</div>
+        <img class="memo-svg" src="memo.png" width="640" height="600" alt="Memo, a pixel-art blue creature with two antennae and big square eyes" />
+        <figcaption>
+          <strong>MEMO</strong><br />
+          Last seen: on stage, Meetup #42<br />
+          Answers to: <code>React.memo</code>
+        </figcaption>
+        <div class="stamp" aria-hidden="true">Case open</div>
+      </figure>
+    </section>
+
+    <!-- ============ ACADEMY ============ -->
+    <section class="section" id="academy">
+      <div class="section-head">
+        <p class="eyebrow">Detective training</p>
+        <h2>Catalyst Data Store &amp; ZCQL 101</h2>
+        <p class="muted">ZCQL looks like SQL, but it has its own rules. Each card runs in the console below. Skim them now, come back when you're stuck.</p>
+      </div>
+
+      <div class="arch" aria-label="How this game runs on Zoho Catalyst">
+        <div class="arch-node"><span class="arch-k">Web Client Hosting</span><span>this page</span></div>
+        <div class="arch-arrow" aria-hidden="true">→</div>
+        <div class="arch-node"><span class="arch-k">Advanced I/O Function</span><span><code>zcql_api</code> · Node.js</span></div>
+        <div class="arch-arrow" aria-hidden="true">→</div>
+        <div class="arch-node"><span class="arch-k">ZCQL</span><span><code>executeZCQLQuery()</code></span></div>
+        <div class="arch-arrow" aria-hidden="true">→</div>
+        <div class="arch-node"><span class="arch-k">Data Store</span><span>8 tables of evidence</span></div>
+      </div>
+
+      <div id="lessons" class="lessons"></div>
+    </section>
+
+    <!-- ============ CONSOLE ============ -->
+    <section class="section" id="console">
+      <div class="section-head">
+        <p class="eyebrow">Investigation room</p>
+        <h2>ZCQL console</h2>
+        <p class="muted">Read-only access to the evidence. <kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>Enter</kbd> runs your query. Click any cell to copy it (handy for those long <code>ROWID</code>s).</p>
+      </div>
+
+      <div class="workspace">
+        <aside class="schema" aria-label="Database schema">
+          <div class="schema-head">
+            <h3>Evidence tables</h3>
+            <button class="link-btn" id="toggle-system" type="button" aria-pressed="false">Show system columns</button>
+          </div>
+          <div id="schema-list" class="schema-list"><p class="muted">Loading schema…</p></div>
+        </aside>
+
+        <div class="editor-col">
+          <div class="editor-card">
+            <div class="editor-bar">
+              <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+              <span class="editor-title">query.zcql</span>
+              <div class="editor-actions">
+                <button class="btn btn-small btn-ghost-dark" id="clear-btn" type="button">Clear</button>
+                <button class="btn btn-small btn-run" id="run-btn" type="button">▶ Run</button>
+              </div>
+            </div>
+            <label for="editor" class="sr-only">ZCQL query</label>
+            <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off">SELECT * FROM Incident_Reports LIMIT 5</textarea>
+          </div>
+
+          <div class="result-card" aria-live="polite">
+            <div class="result-bar">
+              <span id="result-status" class="muted">Run a query to see results.</span>
+              <span id="copy-toast" class="copy-toast" hidden>Copied!</span>
+            </div>
+            <div id="result" class="result"></div>
+          </div>
+
+          <div class="below-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Detective's notebook</h3>
+                <span class="muted small">Saved in this browser</span>
+              </div>
+              <label for="notebook" class="sr-only">Notes</label>
+              <textarea id="notebook" class="notebook" placeholder="Suspects, ROWIDs, clues… e.g.&#10;Meetup #42 ROWID = …&#10;Witness 1 = …"></textarea>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Query history</h3>
+                <button class="link-btn" id="clear-history" type="button">Clear</button>
+              </div>
+              <ol id="history" class="history"></ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ HINTS ============ -->
+    <section class="section" id="hints">
+      <div class="section-head">
+        <p class="eyebrow">Stuck?</p>
+        <h2>Hints</h2>
+        <p class="muted">Each hint reveals a little more. Real detectives try first.</p>
+      </div>
+      <div id="hint-list" class="hint-list"></div>
+    </section>
+
+    <!-- ============ SOLVE ============ -->
+    <section class="section" id="solve">
+      <div class="section-head">
+        <p class="eyebrow">Make the arrest</p>
+        <h2>Solve the case</h2>
+      </div>
+      <div class="solve-grid">
+        <form class="solve-card" id="form-kidnapper" data-stage="kidnapper">
+          <p class="stage-label">Stage 1</p>
+          <h3>Who kidnapped Memo?</h3>
+          <label for="ans-kidnapper">Full name, exactly as in <code>Persons</code></label>
+          <div class="solve-row">
+            <input id="ans-kidnapper" name="name" autocomplete="off" placeholder="e.g. Firstname Lastname" required />
+            <button class="btn btn-primary" type="submit">Accuse</button>
+          </div>
+          <div class="verdict" aria-live="polite"></div>
+          <p class="split" hidden></p>
+        </form>
+
+        <form class="solve-card locked" id="form-mastermind" data-stage="mastermind" aria-disabled="true">
+          <p class="stage-label">Stage 2</p>
+          <h3>Who was the mastermind?</h3>
+          <p class="lock-note">🔒 Unlocks after you catch the kidnapper.</p>
+          <label for="ans-mastermind">Full name, exactly as in <code>Persons</code></label>
+          <div class="solve-row">
+            <input id="ans-mastermind" name="name" autocomplete="off" placeholder="e.g. Firstname Lastname" required disabled />
+            <button class="btn btn-primary" type="submit" disabled>Accuse</button>
+          </div>
+          <div class="verdict" aria-live="polite"></div>
+          <p class="split" hidden></p>
+        </form>
+      </div>
+      <p class="muted small reset-line"><button class="link-btn" id="reset-progress" type="button">Reset my progress</button></p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>A ZCQL mystery for the ReactHyderabad community, built on Zoho Catalyst. All people, places and events in the data are fictional.</p>
+    <p class="muted small">Inspired by the SQL Murder Mystery format by Knight Lab.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
